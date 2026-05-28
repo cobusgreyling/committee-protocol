@@ -29,7 +29,7 @@ Four grade-school math problems, solved by a Haiku-class committee. Each problem
 
 ## Use it on your own task
 
-Subclass `Task` with five methods:
+Subclass `Task`. Five methods are required; a sixth — `verify` — is optional but is what makes the protocol meaningfully better than majority vote:
 
 ```python
 from committee import Task, TaskContext
@@ -40,6 +40,13 @@ class MyTask(Task):
     def apply(self, state, action): ...
     def render(self, state) -> TaskContext: ...   # prompts for the three roles
     def parse_action(self, llm_text): ...         # extract structured action
+
+    # Optional. Return True / False to short-circuit the LLM critic with hard
+    # ground truth (run tests, type-check, check arithmetic, execute the code).
+    # Return None to fall back to LLM-judged critique. This is the hook that
+    # makes propose/critique/compare actually verifier-backed rather than
+    # LLM-judged-only.
+    def verify(self, state, action) -> bool | None: ...
 ```
 
 Then run a committee over it:
@@ -56,6 +63,20 @@ async def main():
 
 asyncio.run(main())
 ```
+
+Token usage is surfaced on `StepResult.usage` (input, output, cache reads, cache writes, call count) so you can put numbers on what the protocol costs versus what you get for it. Prompt caching is on by default — the system block is cached across the k·m + k·r·2 calls per step.
+
+## Compare against baselines
+
+The protocol is only interesting if it beats simpler strategies. `examples/eval.py` runs three on the demo problems and prints a table:
+
+```bash
+python examples/eval.py
+```
+
+- `single` — one Haiku sample per problem
+- `majority` — k Haiku samples, pick the most common answer
+- `committee` — full Πk,m,r protocol
 
 ## Knobs
 

@@ -35,3 +35,15 @@ class Task(ABC, Generic[S, A]):
     @abstractmethod
     def parse_action(self, llm_text: str) -> A:
         """Extract a structured action from raw LLM output. Raise ValueError if unparseable."""
+
+    def verify(self, state: S, action: A) -> bool | None:
+        """Optional programmatic ground-truth verifier.
+
+        Return True to short-circuit the critic with ACCEPT, False to short-circuit
+        with REJECT, None to fall back to LLM-judged critique. This is the hook
+        the README's "verifier-backed tasks" claim depends on — running tests,
+        type-checking, executing code, checking arithmetic. The LLM critic alone
+        is weak evidence; the verifier is what makes propose/critique/compare
+        meaningfully better than majority vote.
+        """
+        return None
