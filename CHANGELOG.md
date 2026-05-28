@@ -5,6 +5,13 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- `CommitteeConfig.proposer_personas: list[str] | None` — round-robin across
+  the k proposer calls, appending each persona to the task's `system_proposer`
+  block. Without this, k=8 is eight near-identical samples; this is the knob
+  that turns the README's fourth quantity (diversity) into something tunable.
+- `CommitteeConfig.proposer_temperature_jitter: float` — per-call uniform
+  jitter on `proposer_temperature`. Cheap alternative to personas when the
+  task has no obvious distinct angles.
 - `OpenAIClient` adapter alongside `AnthropicClient`. The protocol itself was
   always provider-agnostic; the import wasn't. Install with
   `pip install committee-protocol[openai]`.

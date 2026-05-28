@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import random
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
@@ -86,19 +87,38 @@ class Proposer(Generic[S, A]):
         self.task = task
 
     async def propose(
-        self, state: S, k: int, temperature: float = 1.0
+        self,
+        state: S,
+        k: int,
+        temperature: float = 1.0,
+        personas: list[str] | None = None,
+        temperature_jitter: float = 0.0,
     ) -> tuple[list[Candidate[A]], Usage]:
         ctx = self.task.render(state)
+
+        def system_for(i: int) -> str:
+            if not personas:
+                return ctx.system_proposer
+            return ctx.system_proposer + "\n\n" + personas[i % len(personas)]
+
+        def temperature_for(_i: int) -> float:
+            if temperature_jitter <= 0:
+                return temperature
+            return max(
+                0.0,
+                temperature + random.uniform(-temperature_jitter, temperature_jitter),
+            )
+
         results = await asyncio.gather(
             *[
                 self.client.complete(
                     model=self.client.config.proposer_model,
-                    system=ctx.system_proposer,
+                    system=system_for(i),
                     user=ctx.describe_state,
-                    temperature=temperature,
+                    temperature=temperature_for(i),
                     tag="proposer",
                 )
-                for _ in range(k)
+                for i in range(k)
             ]
         )
         usage = Usage()

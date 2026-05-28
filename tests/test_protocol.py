@@ -178,6 +178,50 @@ async def test_consistent_preference_wins():
     assert outcome == 1
 
 
+# ---- Proposer: personas + temperature jitter -----------------------------
+
+
+@pytest.mark.asyncio
+async def test_personas_round_robin_into_system_prompt():
+    client = MockClient(text_responder=lambda *a: "ANSWER: 1")
+    task = IntTask()
+    proposer = Proposer(client, task)
+    personas = ["PERSONA-A", "PERSONA-B"]
+    await proposer.propose(
+        task.initial_state(), k=4, personas=personas
+    )
+    systems = [s for _tag, s, _u, _t in client.text_calls]
+    assert "PERSONA-A" in systems[0]
+    assert "PERSONA-B" in systems[1]
+    assert "PERSONA-A" in systems[2]
+    assert "PERSONA-B" in systems[3]
+
+
+@pytest.mark.asyncio
+async def test_temperature_jitter_within_bounds():
+    import random as _random
+    _random.seed(42)
+    client = MockClient(text_responder=lambda *a: "ANSWER: 1")
+    task = IntTask()
+    proposer = Proposer(client, task)
+    await proposer.propose(
+        task.initial_state(), k=8, temperature=0.7, temperature_jitter=0.3
+    )
+    temps = [t for _tag, _s, _u, t in client.text_calls]
+    assert all(0.4 <= t <= 1.0 for t in temps)
+    assert len(set(temps)) > 1  # actually different
+
+
+@pytest.mark.asyncio
+async def test_no_jitter_keeps_temperature_constant():
+    client = MockClient(text_responder=lambda *a: "ANSWER: 1")
+    task = IntTask()
+    proposer = Proposer(client, task)
+    await proposer.propose(task.initial_state(), k=4, temperature=0.5)
+    temps = [t for _tag, _s, _u, t in client.text_calls]
+    assert temps == [0.5, 0.5, 0.5, 0.5]
+
+
 # ---- Proposer: parse failures are silently dropped -----------------------
 
 

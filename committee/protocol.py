@@ -23,6 +23,22 @@ class CommitteeConfig:
     r: int = 5
     max_steps: int = 1
     proposer_temperature: float = 1.0
+    proposer_personas: list[str] | None = None
+    """One persona per proposer slot, round-robin across the k calls.
+
+    The README's fourth quantity — diversity — is set by prompt design, not by
+    k/m/r. If every proposer call sees the same system prompt at the same
+    temperature, k=8 buys you eight near-identical samples. Personas give the k
+    proposers different angles (e.g. "solve algebraically", "solve by
+    estimation", "list edge cases first"), and the i-th persona is appended to
+    the task's `system_proposer` block on call i.
+    """
+    proposer_temperature_jitter: float = 0.0
+    """Per-call uniform jitter added to `proposer_temperature` (clamped to >= 0).
+
+    Cheaper than personas — useful when the task doesn't have obvious distinct
+    angles but you still want the k samples to drift apart.
+    """
 
 
 @dataclass
@@ -50,7 +66,11 @@ class Committee(Generic[S, A]):
     async def step(self, state: S) -> StepResult[A]:
         usage = Usage()
         proposals, prop_usage = await self.proposer.propose(
-            state, self.config.k, self.config.proposer_temperature
+            state,
+            self.config.k,
+            self.config.proposer_temperature,
+            personas=self.config.proposer_personas,
+            temperature_jitter=self.config.proposer_temperature_jitter,
         )
         usage.add(prop_usage)
         if not proposals:

@@ -30,7 +30,7 @@ class MockClient(LLMClient):
         super().__init__(config=LLMConfig())
         self.text_responder = text_responder
         self.tool_responder = tool_responder
-        self.text_calls: list[tuple[str | None, str, str]] = []
+        self.text_calls: list[tuple[str | None, str, str, float]] = []
         self.tool_calls: list[tuple[str | None, str, str, str]] = []
 
     async def complete(
@@ -41,7 +41,7 @@ class MockClient(LLMClient):
         temperature: float = 1.0,
         tag: str | None = None,
     ) -> TextResult:
-        self.text_calls.append((tag, system, user))
+        self.text_calls.append((tag, system, user, temperature))
         if self.text_responder is None:
             raise RuntimeError("MockClient.text_responder not set")
         return TextResult(text=self.text_responder(tag, system, user), usage=FakeUsage.one())
