@@ -16,7 +16,7 @@ import asyncio
 import re
 from dataclasses import dataclass
 
-from committee import Committee, CommitteeConfig, LLMClient, Task, TaskContext, Usage
+from committee import AnthropicClient, Committee, CommitteeConfig, Task, TaskContext, Usage
 
 
 @dataclass
@@ -73,7 +73,7 @@ PROBLEMS = [
 
 async def main():
     config = CommitteeConfig(k=4, m=3, r=2, max_steps=1)
-    llm = LLMClient()
+    llm = AnthropicClient()
     totals = Usage()
     passes = 0
     for question, gold in PROBLEMS:

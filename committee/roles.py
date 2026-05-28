@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
-from .client import LLMClient, Usage
+from .clients import LLMClient, Tool, Usage
 from .task import Task
 
 S = TypeVar("S")
@@ -18,10 +18,10 @@ class Candidate(Generic[A]):
     raw: str
 
 
-CRITIC_TOOL: dict[str, Any] = {
-    "name": "submit_critique",
-    "description": "Submit your verdict on the candidate move.",
-    "input_schema": {
+CRITIC_TOOL = Tool(
+    name="submit_critique",
+    description="Submit your verdict on the candidate move.",
+    parameters={
         "type": "object",
         "properties": {
             "verdict": {
@@ -39,13 +39,13 @@ CRITIC_TOOL: dict[str, Any] = {
         },
         "required": ["verdict", "reason"],
     },
-}
+)
 
 
-COMPARATOR_TOOL: dict[str, Any] = {
-    "name": "submit_comparison",
-    "description": "Submit which candidate is better.",
-    "input_schema": {
+COMPARATOR_TOOL = Tool(
+    name="submit_comparison",
+    description="Submit which candidate is better.",
+    parameters={
         "type": "object",
         "properties": {
             "choice": {
@@ -63,7 +63,7 @@ COMPARATOR_TOOL: dict[str, Any] = {
         },
         "required": ["choice", "reason"],
     },
-}
+)
 
 
 CRITIC_INSTR = (

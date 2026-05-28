@@ -5,8 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from committee import LLMClient, LLMConfig, Usage
-from committee.client import TextResult, ToolResult
+from committee import LLMClient, LLMConfig, TextResult, Tool, ToolResult, Usage
 
 
 @dataclass
@@ -28,8 +27,7 @@ class MockClient(LLMClient):
         text_responder: Callable[[str | None, str, str], str] | None = None,
         tool_responder: Callable[[str | None, str, str, str], dict[str, Any]] | None = None,
     ):
-        self.config = LLMConfig()
-        self.logger = None
+        super().__init__(config=LLMConfig())
         self.text_responder = text_responder
         self.tool_responder = tool_responder
         self.text_calls: list[tuple[str | None, str, str]] = []
@@ -53,14 +51,14 @@ class MockClient(LLMClient):
         model: str,
         system: str,
         user: str,
-        tool: dict[str, Any],
+        tool: Tool,
         temperature: float = 0.7,
         tag: str | None = None,
     ) -> ToolResult:
-        self.tool_calls.append((tag, tool["name"], system, user))
+        self.tool_calls.append((tag, tool.name, system, user))
         if self.tool_responder is None:
             raise RuntimeError("MockClient.tool_responder not set")
         return ToolResult(
-            input=self.tool_responder(tag, tool["name"], system, user),
+            input=self.tool_responder(tag, tool.name, system, user),
             usage=FakeUsage.one(),
         )

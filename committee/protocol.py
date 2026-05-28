@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Generic, TypeVar
 
-from .client import LLMClient, LLMConfig, Usage
+from .clients import AnthropicClient, LLMClient, Usage
 from .roles import Candidate, Comparator, Critic, Proposer
 from .task import Task
 
@@ -42,7 +42,7 @@ class Committee(Generic[S, A]):
     ):
         self.task = task
         self.config = config or CommitteeConfig()
-        self.llm = llm or LLMClient(LLMConfig())
+        self.llm = llm or AnthropicClient()
         self.proposer = Proposer(self.llm, task)
         self.critic = Critic(self.llm, task)
         self.comparator = Comparator(self.llm, task)

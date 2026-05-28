@@ -1,80 +1,33 @@
-"""Thin async wrapper around the Anthropic SDK.
+"""Anthropic Messages API adapter.
 
-Adds: bounded concurrency, prompt caching on the system block, structured
-tool-use for critic and comparator, configurable retries, per-call usage
-accounting, optional JSONL run logging.
+Marks the system block as `cache_control: ephemeral` so the API serves it from
+cache across the k*m + k*r*2 calls per step — most of the cost savings come
+from this.
 """
 from __future__ import annotations
 
-import asyncio
-import dataclasses
 import os
-from dataclasses import dataclass
 from typing import Any
 
 from anthropic import AsyncAnthropic
 
-from .logging import RunLogger
-
-DEFAULT_PROPOSER_MODEL = "claude-haiku-4-5-20251001"
-DEFAULT_CRITIC_MODEL = "claude-haiku-4-5-20251001"
-DEFAULT_COMPARATOR_MODEL = "claude-haiku-4-5-20251001"
+from ..logging import RunLogger
+from .base import LLMClient, LLMConfig, TextResult, Tool, ToolResult, Usage
 
 
-@dataclass
-class Usage:
-    """Token usage aggregated across one or more LLM calls."""
+class AnthropicClient(LLMClient):
+    DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cache_creation_input_tokens: int = 0
-    cache_read_input_tokens: int = 0
-    calls: int = 0
-
-    def add(self, other: Usage) -> None:
-        self.input_tokens += other.input_tokens
-        self.output_tokens += other.output_tokens
-        self.cache_creation_input_tokens += other.cache_creation_input_tokens
-        self.cache_read_input_tokens += other.cache_read_input_tokens
-        self.calls += other.calls
-
-
-@dataclass
-class LLMConfig:
-    proposer_model: str = DEFAULT_PROPOSER_MODEL
-    critic_model: str = DEFAULT_CRITIC_MODEL
-    comparator_model: str = DEFAULT_COMPARATOR_MODEL
-    max_tokens: int = 1024
-    max_concurrency: int = 8
-    max_retries: int = 4
-    api_key: str | None = None
-
-
-@dataclass
-class TextResult:
-    text: str
-    usage: Usage
-
-
-@dataclass
-class ToolResult:
-    input: dict[str, Any]
-    usage: Usage
-
-
-class LLMClient:
     def __init__(
         self,
         config: LLMConfig | None = None,
         logger: RunLogger | None = None,
     ):
-        self.config = config or LLMConfig()
+        super().__init__(config=config, logger=logger)
         key = self.config.api_key or os.environ.get("ANTHROPIC_API_KEY")
         self._client = AsyncAnthropic(
             api_key=key, max_retries=self.config.max_retries
         )
-        self._semaphore = asyncio.Semaphore(self.config.max_concurrency)
-        self.logger = logger
 
     @staticmethod
     def _extract_usage(msg: Any) -> Usage:
@@ -89,9 +42,6 @@ class LLMClient:
 
     @staticmethod
     def _system_blocks(system: str) -> list[dict[str, Any]]:
-        # The system prompt is identical across the k*m + k*r*2 calls per step.
-        # Marking it ephemeral lets the API serve it from cache on every call
-        # after the first, which is where most of the cost savings come from.
         return [
             {
                 "type": "text",
@@ -100,29 +50,13 @@ class LLMClient:
             }
         ]
 
-    def _log(
-        self,
-        tag: str | None,
-        model: str,
-        kind: str,
-        system: str,
-        user: str,
-        output: Any,
-        usage: Usage,
-    ) -> None:
-        if not self.logger:
-            return
-        self.logger.write(
-            {
-                "tag": tag,
-                "model": model,
-                "kind": kind,
-                "system_prefix": system[:200],
-                "user": user,
-                "output": output,
-                "usage": dataclasses.asdict(usage),
-            }
-        )
+    @staticmethod
+    def _tool_schema(tool: Tool) -> dict[str, Any]:
+        return {
+            "name": tool.name,
+            "description": tool.description,
+            "input_schema": tool.parameters,
+        }
 
     async def complete(
         self,
@@ -154,7 +88,7 @@ class LLMClient:
         model: str,
         system: str,
         user: str,
-        tool: dict[str, Any],
+        tool: Tool,
         temperature: float = 0.7,
         tag: str | None = None,
     ) -> ToolResult:
@@ -165,15 +99,15 @@ class LLMClient:
                 system=self._system_blocks(system),
                 messages=[{"role": "user", "content": user}],
                 temperature=temperature,
-                tools=[tool],
-                tool_choice={"type": "tool", "name": tool["name"]},
+                tools=[self._tool_schema(tool)],
+                tool_choice={"type": "tool", "name": tool.name},
             )
         for block in msg.content:
-            if getattr(block, "type", None) == "tool_use" and block.name == tool["name"]:
+            if getattr(block, "type", None) == "tool_use" and block.name == tool.name:
                 inp = dict(block.input)
                 usage = self._extract_usage(msg)
                 self._log(tag, model, "tool", system, user, inp, usage)
                 return ToolResult(input=inp, usage=usage)
         raise RuntimeError(
-            f"model did not return a tool_use block for {tool['name']!r}"
+            f"model did not return a tool_use block for {tool.name!r}"
         )

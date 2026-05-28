@@ -26,7 +26,7 @@ from dataclasses import dataclass
 # Reuse the demo problems so this script is self-contained.
 from math_word_problems import PROBLEMS, MathTask
 
-from committee import Committee, CommitteeConfig, LLMClient, Usage
+from committee import AnthropicClient, Committee, CommitteeConfig, LLMClient, Usage
 
 
 @dataclass
@@ -118,7 +118,7 @@ async def main() -> None:
     ap.add_argument("--r", type=int, default=2)
     args = ap.parse_args()
 
-    llm = LLMClient()
+    llm = AnthropicClient()
     single = Outcome("single", 0, len(PROBLEMS), Usage())
     majority = Outcome(f"majority{args.k}", 0, len(PROBLEMS), Usage())
     committee = Outcome("committee", 0, len(PROBLEMS), Usage())
