@@ -5,6 +5,11 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- `examples/gsm8k.py` — runs single / majority / committee on a configurable
+  GSM8K subset (default 200 problems, --n for more) and writes a JSON
+  payload to `results/`. First run downloads `test.jsonl` and caches it.
+- `RESULTS.md` — methodology, reproduce-it instructions, and a table to fill
+  in. No fabricated numbers; run the harness and PR the results.
 - `examples/code_generation.py` — verifier-backed Task where `verify()` exec's
   the proposed code against hidden unit tests and returns hard True/False.
   Six HumanEval-style problems with personas wired up. This is the example

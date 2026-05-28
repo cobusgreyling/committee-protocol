@@ -78,6 +78,12 @@ python examples/eval.py
 - `majority` — k Haiku samples, pick the most common answer
 - `committee` — full Πk,m,r protocol
 
+For a real benchmark, `examples/gsm8k.py` runs the same three strategies over a 200-problem subset of GSM8K (or the full 1319), with personas wired up and per-strategy cost tracking. See [RESULTS.md](RESULTS.md) for methodology and the table to fill in.
+
+```bash
+python examples/gsm8k.py --n 200
+```
+
 ## Knobs
 
 `CommitteeConfig`:
