@@ -47,6 +47,14 @@ class StepResult(Generic[A]):
     survivors: list[Candidate[A]]
     proposals: list[Candidate[A]]
     usage: Usage = field(default_factory=Usage)
+    usage_by_role: dict[str, Usage] = field(
+        default_factory=lambda: {
+            "proposer": Usage(),
+            "critic": Usage(),
+            "comparator": Usage(),
+        }
+    )
+    """Per-role usage split. The aggregate `usage` is the sum of these three."""
 
 
 class Committee(Generic[S, A]):
@@ -65,6 +73,7 @@ class Committee(Generic[S, A]):
 
     async def step(self, state: S) -> StepResult[A]:
         usage = Usage()
+        by_role = {"proposer": Usage(), "critic": Usage(), "comparator": Usage()}
         proposals, prop_usage = await self.proposer.propose(
             state,
             self.config.k,
@@ -73,16 +82,22 @@ class Committee(Generic[S, A]):
             temperature_jitter=self.config.proposer_temperature_jitter,
         )
         usage.add(prop_usage)
+        by_role["proposer"].add(prop_usage)
         if not proposals:
-            return StepResult(chosen=None, survivors=[], proposals=[], usage=usage)
+            return StepResult(
+                chosen=None, survivors=[], proposals=[],
+                usage=usage, usage_by_role=by_role,
+            )
 
         survivors, accept_counts, critic_usage = await self.critic.filter(
             state, proposals, self.config.m
         )
         usage.add(critic_usage)
+        by_role["critic"].add(critic_usage)
         if not survivors:
             return StepResult(
-                chosen=None, survivors=[], proposals=proposals, usage=usage
+                chosen=None, survivors=[], proposals=proposals,
+                usage=usage, usage_by_role=by_role,
             )
         if len(survivors) == 1:
             return StepResult(
@@ -90,6 +105,7 @@ class Committee(Generic[S, A]):
                 survivors=survivors,
                 proposals=proposals,
                 usage=usage,
+                usage_by_role=by_role,
             )
 
         pairs = [
@@ -108,6 +124,7 @@ class Committee(Generic[S, A]):
         scores = [0] * len(survivors)
         for (i, j), (outcome, comp_usage) in zip(pairs, outcomes, strict=True):
             usage.add(comp_usage)
+            by_role["comparator"].add(comp_usage)
             if outcome > 0:
                 scores[i] += 1
             elif outcome < 0:
@@ -115,7 +132,8 @@ class Committee(Generic[S, A]):
 
         chosen = self._pick_winner(survivors, scores, accept_counts)
         return StepResult(
-            chosen=chosen, survivors=survivors, proposals=proposals, usage=usage
+            chosen=chosen, survivors=survivors, proposals=proposals,
+            usage=usage, usage_by_role=by_role,
         )
 
     @staticmethod

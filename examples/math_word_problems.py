@@ -17,6 +17,7 @@ import re
 from dataclasses import dataclass
 
 from committee import AnthropicClient, Committee, CommitteeConfig, Task, TaskContext, Usage
+from committee.pricing import HAIKU_4_5
 
 
 @dataclass
@@ -97,6 +98,7 @@ async def main():
         f"cache_write={totals.cache_creation_input_tokens} "
         f"calls={totals.calls}"
     )
+    print(f"Cost (Haiku 4.5): ${totals.estimated_cost(HAIKU_4_5):.4f}")
 
 
 if __name__ == "__main__":

@@ -33,6 +33,21 @@ class Usage:
         self.cache_read_input_tokens += other.cache_read_input_tokens
         self.calls += other.calls
 
+    def estimated_cost(self, pricing: Any) -> float:
+        """USD given a `committee.pricing.Pricing` (or anything with the same fields).
+
+        Assumes `input_tokens`, `cache_read_input_tokens`, and
+        `cache_creation_input_tokens` are disjoint — i.e. the adapters
+        normalize the OpenAI shape (`prompt_tokens` includes cached) into the
+        Anthropic shape (`input_tokens` excludes cached) at extraction time.
+        """
+        return (
+            self.input_tokens * pricing.input_per_mtok
+            + self.output_tokens * pricing.output_per_mtok
+            + self.cache_read_input_tokens * pricing.cache_read_per_mtok
+            + self.cache_creation_input_tokens * pricing.cache_write_per_mtok
+        ) / 1_000_000
+
 
 @dataclass
 class TextResult:

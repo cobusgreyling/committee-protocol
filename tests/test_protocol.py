@@ -14,9 +14,11 @@ from committee import (
     CommitteeConfig,
     Comparator,
     Critic,
+    Pricing,
     Proposer,
     Task,
     TaskContext,
+    Usage,
 )
 
 from .conftest import MockClient
@@ -243,6 +245,52 @@ async def test_parse_failures_dropped():
     candidates, usage = await proposer.propose(task.initial_state(), k=4, temperature=1.0)
     assert [c.action for c in candidates] == [42, 7]
     assert usage.calls == 4  # all 4 were called even though 2 were dropped
+
+
+# ---- Cost helper + per-role usage breakdown ------------------------------
+
+
+def test_usage_estimated_cost():
+    pricing = Pricing(
+        input_per_mtok=1.0,
+        output_per_mtok=5.0,
+        cache_read_per_mtok=0.1,
+        cache_write_per_mtok=1.25,
+    )
+    u = Usage(
+        input_tokens=1_000_000,
+        output_tokens=500_000,
+        cache_read_input_tokens=2_000_000,
+        cache_creation_input_tokens=200_000,
+    )
+    cost = u.estimated_cost(pricing)
+    # 1.0 + 2.5 + 0.2 + 0.25 = 3.95
+    assert abs(cost - 3.95) < 1e-9
+
+
+@pytest.mark.asyncio
+async def test_step_result_usage_by_role():
+    # Two proposals, both accepted, one comparator pair. Each call uses 1 token in/1 token out.
+    client = MockClient(
+        text_responder=lambda *a: "ANSWER: 1",
+        tool_responder=lambda tag, *a: (
+            {"verdict": "ACCEPT", "reason": "ok"} if tag == "critic"
+            else {"choice": "A", "reason": "ok"}
+        ),
+    )
+    task = IntTask()
+    committee = Committee(
+        task=task, config=CommitteeConfig(k=2, m=2, r=1, max_steps=1), llm=client
+    )
+    result = await committee.step(task.initial_state())
+    by_role = result.usage_by_role
+    # proposer: k=2 calls. critic: 2 cands * m=2 votes = 4. comparator: 1 pair * r=1 round * 2 orderings = 2.
+    assert by_role["proposer"].calls == 2
+    assert by_role["critic"].calls == 4
+    assert by_role["comparator"].calls == 2
+    # aggregate equals sum of parts
+    total = by_role["proposer"].calls + by_role["critic"].calls + by_role["comparator"].calls
+    assert result.usage.calls == total
 
 
 # ---- Committee step: empty proposals returns chosen=None -----------------

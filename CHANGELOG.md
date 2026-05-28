@@ -5,6 +5,17 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- `Usage.estimated_cost(pricing) -> float` — USD given a `Pricing` dataclass
+  (input / output / cache-read / cache-write rates per million tokens).
+- `committee.pricing` module with a small catalog (`HAIKU_4_5`, `SONNET_4_5`,
+  `OPUS_4_5`, `GPT_4O_MINI`, `GPT_4O`). Prices are best-effort snapshots;
+  build your own `Pricing(...)` to override.
+- `StepResult.usage_by_role: dict[str, Usage]` — splits the aggregate `usage`
+  into proposer / critic / comparator. Lets you see which role is burning
+  tokens at a given (k, m, r) before tuning.
+- `OpenAIClient` now normalizes its usage to the Anthropic shape
+  (`input_tokens` excludes cached) so cost math and cross-provider
+  aggregation work uniformly.
 - `CommitteeConfig.proposer_personas: list[str] | None` — round-robin across
   the k proposer calls, appending each persona to the task's `system_proposer`
   block. Without this, k=8 is eight near-identical samples; this is the knob

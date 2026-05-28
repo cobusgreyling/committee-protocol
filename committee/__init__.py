@@ -9,6 +9,7 @@ from .clients import (
     Usage,
 )
 from .logging import RunLogger
+from .pricing import Pricing
 from .protocol import Committee, CommitteeConfig, StepResult
 from .roles import Candidate, Comparator, Critic, Proposer
 from .task import Task, TaskContext
@@ -23,6 +24,7 @@ __all__ = [
     "LLMClient",
     "LLMConfig",
     "OpenAIClient",
+    "Pricing",
     "Proposer",
     "RunLogger",
     "StepResult",

@@ -44,8 +44,12 @@ class OpenAIClient(LLMClient):
         details = getattr(u, "prompt_tokens_details", None)
         if details is not None:
             cache_read = getattr(details, "cached_tokens", 0) or 0
+        # OpenAI reports prompt_tokens INCLUSIVE of cached tokens; normalize to
+        # the Anthropic shape (input_tokens = uncached input only) so cost
+        # math and cross-provider aggregation work uniformly.
+        total_prompt = getattr(u, "prompt_tokens", 0) or 0
         return Usage(
-            input_tokens=getattr(u, "prompt_tokens", 0) or 0,
+            input_tokens=max(0, total_prompt - cache_read),
             output_tokens=getattr(u, "completion_tokens", 0) or 0,
             cache_creation_input_tokens=0,
             cache_read_input_tokens=cache_read,
