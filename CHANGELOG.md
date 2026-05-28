@@ -5,6 +5,11 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- `THEORY.md` — what Πk,m,r means, the four quantities (coverage,
+  identifiability, progress, diversity), why unanimous-ACCEPT for the
+  critic, why both-orders-or-tie for the comparator, why Copeland, where
+  this sits relative to best-of-n / self-consistency / ToT / debate.
+- ASCII flow diagram at the top of the README.
 - `examples/gsm8k.py` — runs single / majority / committee on a configurable
   GSM8K subset (default 200 problems, --n for more) and writes a JSON
   payload to `results/`. First run downloads `test.jsonl` and caches it.

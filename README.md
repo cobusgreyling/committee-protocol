@@ -10,6 +10,39 @@ Three roles. Each does one thing.
 
 The both-orders-or-tie rule is what makes the LLM judge usable as weak evidence rather than ground truth.
 
+```
+            state s_t
+                │
+                ▼
+   ┌──────────────────────────────┐
+   │  PROPOSER × k                │   ─→ k candidates       coverage
+   │  personas, jittered temp     │
+   └──────────────────────────────┘
+                │
+                ▼
+   ┌──────────────────────────────┐
+   │  Task.verify(candidate)      │
+   │   True  → ACCEPT, skip LLM   │
+   │   False → REJECT, skip LLM   │
+   │   None  → ↓                  │
+   │  CRITIC × m                  │   ─→ survivors          identifiability
+   │  any REJECT drops            │
+   └──────────────────────────────┘
+                │
+                ▼
+   ┌──────────────────────────────┐
+   │  COMPARATOR × r per pair     │
+   │  both orders; agree → vote;  │
+   │  disagree → tie              │   ─→ Copeland scores    identifiability
+   │  critic-margin tiebreak      │
+   └──────────────────────────────┘
+                │
+                ▼
+            winner s_{t+1}
+```
+
+For the longer-form version — why unanimous ACCEPT, why both-orders-or-tie, why Copeland, and where Πk,m,r sits relative to best-of-n / self-consistency / ToT / debate — see [THEORY.md](THEORY.md).
+
 ## Install
 
 ```bash
