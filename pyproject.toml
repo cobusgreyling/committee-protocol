@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "committee-protocol"
+version = "0.1.0"
+description = "Pi_k,m,r — propose/critique/compare orchestration for weak reasoning models."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Cobus Greyling" }]
+dependencies = [
+    "anthropic>=0.40.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["committee*"]
