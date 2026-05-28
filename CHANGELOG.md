@@ -5,6 +5,10 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- `examples/code_generation.py` — verifier-backed Task where `verify()` exec's
+  the proposed code against hidden unit tests and returns hard True/False.
+  Six HumanEval-style problems with personas wired up. This is the example
+  the README's verify() pitch actually needs.
 - `Usage.estimated_cost(pricing) -> float` — USD given a `Pricing` dataclass
   (input / output / cache-read / cache-write rates per million tokens).
 - `committee.pricing` module with a small catalog (`HAIKU_4_5`, `SONNET_4_5`,
